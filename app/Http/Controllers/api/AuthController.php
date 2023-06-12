@@ -34,19 +34,36 @@ class AuthController extends Controller
             return response()->json($validator->errors(), 422);
         }
         if (! $token = auth()->attempt($validator->validated())) {
-            return response()->json(['error' => 'Unauthorized'], 401);
+            return response()->json([
+                'status' => 'false',
+                'message' => 'Email or password is wrong please try again',
+                'access_token' => 'null',
+                'token_type' => 'null',
+                // 'expires_in' => auth()->factory()->getTTL() * 60,
+                'name' => 'null',
+                'id' => 'null',
+                'profile_image'=> 'null',
+            ],);
         }
         return $this->createNewToken($token);
     }
     protected function createNewToken($token){
 
+        $profile_image = DB::table('users_images')->select('profile_image')->where('User-id',auth()->user()->id)->get();
+        $profImage=$profile_image->value('profile_image');
+
         return response()->json([
+            'status' => 'true',
+            'message' => 'welcome '.auth()->user()->name,
             'access_token' => $token,
             'token_type' => 'bearer',
-            'expires_in' => auth()->factory()->getTTL() * 60,
-
+            // 'expires_in' => auth()->factory()->getTTL() * 60,
+            'name' => auth()->user()->name,
+            'id' => (string) auth()->user()->id,
+            'profile_image'=>$profImage,
         ]);
     }
+
 
     /**
      * Register a User.
@@ -63,7 +80,11 @@ class AuthController extends Controller
             'birth_date' => 'required|date',
         ]);
         if($validator->fails()){
-            return response()->json($validator->errors()->toJson(), 400);
+            return response()->json([
+                'statues' => 'false',
+                'message' => $validator->errors()->toArray(),
+                'id'=> 'null'
+            ]);
         }
         $user = User::create(array_merge(
                     $validator->validated(),
@@ -72,8 +93,9 @@ class AuthController extends Controller
                 ));
 
         return response()->json([
+            'statues' => 'true',
             'message' => 'User successfully registered',
-            'user' => $user,
+            'id' =>(string) $user->id,
         ], 201);
     }
 
@@ -101,20 +123,6 @@ class AuthController extends Controller
      * @return \Illuminate\Http\JsonResponse
      */
 
-    public function userProfile() {
-        $phoneNumber = DB::table('phone_numbers')->get()->where('User-id',auth()->user()->id);
-        $profile_image = DB::table('users_images')->select('profile_image')->where('User-id',auth()->user()->id)->get();
-        $xray = DB::table('xrays')->select('xray')->where('User-id',auth()->user()->id)->get();
-        $anatomy = DB::table('anatomies')->select('anatomy')->where('User-id',auth()->user()->id)->get();
-        return response()->json([
-            'user' => auth()->user(),
-            'phone'=> $phoneNumber,
-            'profile_image'=>$profile_image,
-            'xrays'=>$xray,
-            'anatomies'=>$anatomy,]          
-    );
-    }
-
     /**
      * Get the token array structure.
      *
@@ -131,8 +139,9 @@ class AuthController extends Controller
             'User-id'=> $request->user()->id
         ]);
         return response()->json([
+            'statues' => 'true',
             'message' => 'anatomy added successfully ',
-        ], 201);
+        ]);
 
         
     }
@@ -146,8 +155,9 @@ class AuthController extends Controller
             'User-id'=> $request->user()->id
         ]);
         return response()->json([
+            'statues' => 'true',
             'message' => 'xray added successfully ',
-        ], 201);
+        ]);
     }
 
 
@@ -155,8 +165,9 @@ class AuthController extends Controller
 
         DB::table('anatomies')->where('id',$id)->delete();
             return response()->json([
+            'statues' => 'true',
             'message' => 'anatomy deleted successfully ',
-        ], 201);
+        ]);
         
     }
     
@@ -164,8 +175,9 @@ public function deletexray($id){
 
     DB::table('xrays')->where('id',$id)->delete();
         return response()->json([
+        'statues' => 'true',
         'message' => 'xray deleted successfully ',
-    ], 201);
+    ]);
     
 }
 
